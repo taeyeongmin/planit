@@ -105,9 +105,12 @@ public class HolidayApiController {
                     ),
                     explode = Explode.TRUE
             ),
+            @Parameter(name = "page", schema = @Schema(type="integer", defaultValue="0")),
+            @Parameter(name = "size", schema = @Schema(type="integer", defaultValue="20")),
+            @Parameter(name = "sort", description = "정렬 방식")
     })
     @GetMapping("/search")
-    public Page<HolidaySearchRes> search(@Parameter(hidden = true) HolidaySearchReq req, Pageable pageable) {
+    public Page<HolidaySearchRes> search(@Parameter(hidden = true) HolidaySearchReq req, @Parameter(hidden = true)Pageable pageable) {
         return holidayQueryService.getHolidaysByScope(req, pageable);
     }
 }
