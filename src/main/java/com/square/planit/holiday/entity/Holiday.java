@@ -1,30 +1,35 @@
 package com.square.planit.holiday.entity;
 
+import com.square.planit.client.dto.HolidayRes;
+import com.square.planit.common.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
+@Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "holiday",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_holiday_country_date_name",
-                columnNames = {"country_id", "date", "name"}
-        ),
-        indexes = {
-                @Index(name = "idx_holiday_year_country", columnList = "holiday_year, country_id"),
-                @Index(name = "idx_date_country", columnList = "date, country_id")
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_holiday_business_key",
+                        columnNames = {"country_code", "date", "local_name", "name"}
+                )
         }
 )
-public class Holiday {
+public class Holiday extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "holiday_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "country_id")
+    @JoinColumn(name = "country_code")
     private Country country;
 
     @Column(nullable = false)
@@ -64,23 +69,26 @@ public class Holiday {
     @Column(name = "county_code", length = 20)
     private Set<String> counties = new HashSet<>();
 
-    protected Holiday() {}
+    public static Holiday create(Country country, HolidayRes hr) {
 
-    // 편의 생성자 API -> 엔티티 매핑용
-    public Holiday(Country country,
-                   LocalDate date,
-                   String localName,
-                   String name,
-                   boolean fixed,
-                   boolean global,
-                   Integer launchYear) {
-        this.country = country;
-        this.date = date;
-        this.year = date.getYear();  // 항상 동시에 세팅
-        this.localName = localName;
-        this.name = name;
+        Holiday holiday = new Holiday();
+        holiday.country = country;
+        holiday.date = hr.date();
+        holiday.year = hr.date().getYear();
+        holiday.localName = hr.localName();
+        holiday.name = hr.name();
+        holiday.fixed = hr.fixed();
+        holiday.global = hr.global();
+        holiday.launchYear = hr.launchYear();
+
+        if (hr.types() != null) holiday.types.addAll(hr.types());
+        if (hr.counties() != null) holiday.counties.addAll(hr.counties());
+
+        return holiday;
+    }
+
+    public void updateBasicInfo(boolean fixed, Integer launchYear) {
         this.fixed = fixed;
-        this.global = global;
         this.launchYear = launchYear;
     }
 }
