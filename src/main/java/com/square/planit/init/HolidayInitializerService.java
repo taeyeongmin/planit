@@ -1,4 +1,4 @@
-package com.square.planit.holiday.service;
+package com.square.planit.init;
 
 public interface HolidayInitializerService {
     void initializeAllData();
