@@ -8,6 +8,7 @@ import com.square.planit.holiday.repository.HolidayRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
@@ -25,8 +26,9 @@ import static org.mockito.Mockito.when;
  *  - country: 1건
  *  - Holiday: 1건
  */
-@ActiveProfiles("test")
+@DirtiesContext
 @SpringBootTest
+@ActiveProfiles("test")
 @Sql("/sql/holiday_test.sql")
 class HolidayUpsertTest {
 
