@@ -6,11 +6,11 @@
 * **Gradle** 또는 **IntelliJ IDEA (Spring Boot 지원)**
 
 ### 실행 명령
-
 ```bash
 # 클린 빌드 후 실행
 ./gradlew clean bootRun
 ```
+#### * 최초 실행 시 국가, 공휴일 조회 API를 통해 데이터 적재
 
 ---
 ## 2.설계한 REST API 명세 요약
