@@ -6,6 +6,9 @@ import com.square.planit.holiday.dto.HolidayKey;
 import com.square.planit.holiday.dto.HolidayRefreshReq;
 import com.square.planit.holiday.entity.Country;
 import com.square.planit.holiday.entity.Holiday;
+import com.square.planit.holiday.entity.HolidayScope;
+import com.square.planit.holiday.enums.HolidayType;
+import com.square.planit.holiday.exception.NotFoundCountryException;
 import com.square.planit.holiday.repository.CountryRepository;
 import com.square.planit.holiday.repository.HolidayRepository;
 import jakarta.transaction.Transactional;
@@ -37,9 +40,10 @@ public class HolidayService {
     @Transactional
     public void upsertHoliday(HolidayRefreshReq holidayRefreshReq) {
 
-        Country country = countryRepository.findById(holidayRefreshReq.getCountryCode()).orElseThrow(() -> new RuntimeException("Country code not found"));
+        Country country = countryRepository.findById(holidayRefreshReq.getCountryCode())
+                .orElseThrow(NotFoundCountryException::new);
 
-        // API 호출
+        // 공휴일 api 호출
         List<HolidayRes> apiRows =
                 apiClient.getPublicHolidays(holidayRefreshReq.getYear(), holidayRefreshReq.getCountryCode());
 
@@ -58,6 +62,7 @@ public class HolidayService {
      */
     private List<Holiday> mergeApiRowsToHolidayList(Country country, List<HolidayRes> apiRows) {
 
+
         Map<HolidayKey, Holiday> merged = new HashMap<>();
 
         for (HolidayRes hr : apiRows) {
@@ -69,9 +74,23 @@ public class HolidayService {
                 holiday = Holiday.create(country, hr);
                 merged.put(key, holiday);
             } else {
-                if (hr.types() != null) holiday.getTypes().addAll(hr.types());
-                if (hr.counties() != null) holiday.getCounties().addAll(hr.counties());
+                // 기본 정보 갱신 (fixed, launchYear 등)
                 holiday.updateBasicInfo(hr.fixed(), hr.launchYear());
+            }
+
+            // countiesm,types 조합을 HolidayScope로
+            List<String> counties = (hr.counties() == null || hr.counties().isEmpty())
+                            ? Collections.singletonList(null)
+                            : hr.counties();
+            List<String> types = hr.types() != null ? hr.types() : List.of();
+
+            for (String typeStr : types) {
+                HolidayType type = HolidayType.of(typeStr);
+
+                for (String county : counties) {
+                    HolidayScope scope = new HolidayScope(county, type);
+                    holiday.addScope(scope);
+                }
             }
         }
 
@@ -82,32 +101,38 @@ public class HolidayService {
 
         for (Holiday newHoliday : mergedHolidays) {
 
-            Optional<Holiday> optional = holidayRepository
+            Optional<Holiday> originHolidayOp = holidayRepository
                     .findByCountryAndDateAndLocalNameAndName(
                             newHoliday.getCountry(),
                             newHoliday.getDate(),
                             newHoliday.getLocalName(),
                             newHoliday.getName()
                     );
+            if (originHolidayOp.isEmpty()) {
 
-            if (optional.isEmpty()) {
-                // 존재하지 않으면 신규 insert
                 holidayRepository.save(newHoliday);
                 continue;
             }
 
-            // 존재하면 update
-            Holiday existing = optional.get();
+            Holiday originHoliday = originHolidayOp.get();
 
             // 기본 필드 업데이트
-            existing.updateBasicInfo(newHoliday.isFixed(), newHoliday.getLaunchYear());
+            originHoliday.updateBasicInfo(newHoliday.isFixed(), newHoliday.getLaunchYear());
 
-            // counties/types는 스냅샷 방식으로 덮어쓴다
-            existing.getTypes().clear();
-            existing.getCounties().clear();
+            // Scope 스냅샷 방식으로 덮어쓰기
+            Set<HolidayScope> existingScopes = new HashSet<>(originHoliday.getScopes());
+            Set<HolidayScope> newScopes = new HashSet<>(newHoliday.getScopes());
 
-            existing.getTypes().addAll(newHoliday.getTypes());
-            existing.getCounties().addAll(newHoliday.getCounties());
+            // 제거할 것: 기존 - 신규
+            Set<HolidayScope> toRemove = new HashSet<>(existingScopes);
+            toRemove.removeAll(newScopes);
+
+            // 추가할 것: 신규 - 기존
+            Set<HolidayScope> toAdd = new HashSet<>(newScopes);
+            toAdd.removeAll(existingScopes);
+
+            toRemove.forEach(originHoliday::removeScope);
+            toAdd.forEach(originHoliday::addScope);
         }
     }
 }

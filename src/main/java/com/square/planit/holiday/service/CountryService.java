@@ -4,6 +4,7 @@ import com.square.planit.client.dto.CountryRes;
 import com.square.planit.client.service.NagerApiClient;
 import com.square.planit.holiday.entity.Country;
 import com.square.planit.holiday.repository.CountryRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ public class CountryService {
     private final CountryRepository countryRepository;
     private final NagerApiClient apiClient;
 
+    @Transactional
     public List<Country> initCountries() {
         List<CountryRes> apiCountries = apiClient.getAvailableCountries();
 

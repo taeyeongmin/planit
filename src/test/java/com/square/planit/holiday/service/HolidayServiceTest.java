@@ -1,94 +1,42 @@
 package com.square.planit.holiday.service;
 
-import com.square.planit.client.dto.HolidayRes;
-import com.square.planit.client.service.NagerApiClient;
-import com.square.planit.holiday.entity.Country;
-import com.square.planit.holiday.entity.Holiday;
+import com.square.planit.holiday.dto.HolidayRefreshReq;
+import com.square.planit.holiday.exception.NotFoundCountryException;
 import com.square.planit.holiday.repository.CountryRepository;
-import com.square.planit.holiday.repository.HolidayRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class HolidayServiceTest {
 
-    @Autowired
-    private HolidayService holidayService;
-
-    @Autowired
-    private HolidayRepository holidayRepository;
-
-    @Autowired
+    @Mock
     private CountryRepository countryRepository;
 
-    @MockitoBean
-    private NagerApiClient apiClient;
+    @InjectMocks
+    private HolidayService holidayService;
+
 
     @Test
-    @Transactional
-    void upsertHoliday_WhenApiReturnsChangedHoliday_ShouldUpdateExistingEntity() {
+    void 예외_존재하지_않는_국가에대한_최신화(){
 
         // given
-        int year = 2025;
-        String countryCode = "KR";
+        HolidayRefreshReq req = new HolidayRefreshReq("KR", 2025);
 
-        // Country 저장
-        Country country = new Country(countryCode, "Korea");
-        countryRepository.save(country);
+        // when
+        when(countryRepository.findById(any())).thenReturn(Optional.empty());
 
-        // 기존 Holiday 저장
-        LocalDate date = LocalDate.of(year, 1, 1);
+        // then
+        assertThrows(NotFoundCountryException.class, () -> holidayService.upsertHoliday(req));
 
-        HolidayRes hr = new HolidayRes(
-                LocalDate.now()
-                ,"대한민국"
-                ,"korea"
-                ,"KR"
-                ,false
-                ,false
-                ,null
-                ,null
-                ,null
-        );
-
-        Holiday originHoliday = Holiday.create(country, hr);
-
-        holidayRepository.save(originHoliday);
-
-        Long oldId = originHoliday.getId();
-//
-//        // API 응답 Mocking
-//        HolidayRes changed = new HolidayRes();
-//        changed.setDate(date);
-//        changed.setName("New Name");
-//        changed.setLocalName("새 이름");
-//
-//        when(apiClient.getPublicHolidays(year, countryCode))
-//                .thenReturn(List.of(changed));
-//
-//        HolidayRefreshReq req = new HolidayRefreshReq(year, countryCode);
-//
-//        // when
-//        holidayService.upsertHoliday(req);
-//
-//        // then
-//        List<Holiday> rows = holidayRepository.findAll();
-//        assertThat(rows).hasSize(1);
-//
-//        Holiday updated = rows.get(0);
-//        assertThat(updated.getId()).isEqualTo(oldId);
-//        assertThat(updated.getName()).isEqualTo("New Name");
-//        assertThat(updated.getLocalName()).isEqualTo("새 이름");
     }
 
 }

@@ -2,6 +2,7 @@ package com.square.planit.holiday;
 
 import com.square.planit.holiday.dto.HolidayRefreshReq;
 import com.square.planit.holiday.service.HolidayService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +17,7 @@ public class HolidayApiController {
     private final HolidayService holidayService;
 
     @PostMapping("/refresh")
-    public void refreshHolidays(@RequestBody HolidayRefreshReq holidayRefreshReq) {
+    public void refreshHolidays(@Valid @RequestBody HolidayRefreshReq holidayRefreshReq) {
         holidayService.upsertHoliday(holidayRefreshReq);
     }
 }

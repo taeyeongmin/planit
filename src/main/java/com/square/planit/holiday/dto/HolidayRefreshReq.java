@@ -1,9 +1,15 @@
 package com.square.planit.holiday.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
+@AllArgsConstructor
 public class HolidayRefreshReq {
+    @NotBlank
     private String countryCode;
-    private int year;
+    @NotNull
+    private Integer year;
 }

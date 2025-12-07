@@ -1,17 +1,14 @@
-package com.square.planit.init;
+package com.square.planit.holiday.service;
 
 import com.square.planit.holiday.entity.Country;
-import com.square.planit.holiday.service.CountryService;
-import com.square.planit.holiday.service.HolidayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class HolidayInitializerService {
+public class HolidayInitializerServiceImpl implements  HolidayInitializerService {
 
     private final CountryService countryService;
     private final HolidayService holidayService;
@@ -19,7 +16,7 @@ public class HolidayInitializerService {
     private static final int START_YEAR = 2020;
     private static final int END_YEAR = 2025;
 
-    @Transactional
+    @Override
     public void initializeAllData() {
 
         List<Country> countries = countryService.initCountries();
@@ -28,7 +25,6 @@ public class HolidayInitializerService {
             for (Country country : countries) {
                 try {
                     holidayService.initHoliday(year, country);
-//                    holidayService.upsertHoliday(year, country);
                 } catch (Exception e) {
                     e.printStackTrace();
                     throw e;

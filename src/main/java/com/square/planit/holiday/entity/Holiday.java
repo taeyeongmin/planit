@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Getter
@@ -17,9 +18,13 @@ import java.util.Set;
 @Table(name = "holiday",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_holiday_business_key",
-                        columnNames = {"country_code", "date", "local_name", "name"}
+                        name = "uk_holiday_country",
+                        columnNames = {"country_code", "date", "name", "local_name"}
                 )
+        },
+        indexes = {
+                @Index(name = "idx_holiday_country_year", columnList = "country_code, holiday_year"),
+                @Index(name = "idx_date", columnList = "date")
         }
 )
 public class Holiday extends BaseEntity {
@@ -53,40 +58,57 @@ public class Holiday extends BaseEntity {
     @Column(name = "launch_year")
     private Integer launchYear;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "holiday_type",
-            joinColumns = @JoinColumn(name = "holiday_id")
+    @OneToMany(
+            mappedBy = "holiday",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
     )
-    @Column(name = "type", length = 50)
-    private Set<String> types = new HashSet<>();
+    private Set<HolidayScope> scopes = new LinkedHashSet<>();
 
-    @ElementCollection
-    @CollectionTable(
-            name = "holiday_county",
-            joinColumns = @JoinColumn(name = "holiday_id")
-    )
-    @Column(name = "county_code", length = 20)
-    private Set<String> counties = new HashSet<>();
-
-    public static Holiday create(Country country, HolidayRes hr) {
-
-        Holiday holiday = new Holiday();
-        holiday.country = country;
-        holiday.date = hr.date();
-        holiday.year = hr.date().getYear();
-        holiday.localName = hr.localName();
-        holiday.name = hr.name();
-        holiday.fixed = hr.fixed();
-        holiday.global = hr.global();
-        holiday.launchYear = hr.launchYear();
-
-        if (hr.types() != null) holiday.types.addAll(hr.types());
-        if (hr.counties() != null) holiday.counties.addAll(hr.counties());
-
-        return holiday;
+    private Holiday(Country country,
+                    LocalDate date,
+                    String localName,
+                    String name,
+                    boolean fixed,
+                    boolean global,
+                    Integer launchYear) {
+        this.country = country;
+        this.date = date;
+        this.localName = localName;
+        this.name = name;
+        this.fixed = fixed;
+        this.global = global;
+        this.launchYear = launchYear;
+        this.year = date.getYear();
     }
 
+    private Holiday(Country country, HolidayRes hr) {
+        this.country = country;
+        this.date = hr.date();
+        this.year = hr.date().getYear();
+        this.localName = hr.localName();
+        this.name = hr.name();
+        this.fixed = hr.fixed();
+        this.global = hr.global();
+        this.launchYear = hr.launchYear();
+    }
+
+    public static Holiday create(Country country, HolidayRes hr) {
+        return new Holiday(country, hr);
+    }
+
+
+    public void addScope(HolidayScope scope) {
+        this.scopes.add(scope);
+        scope.setHoliday(this);
+    }
+
+    public void removeScope(HolidayScope scope) {
+        this.scopes.remove(scope);
+        scope.setHoliday(null);
+    }
+
+    // refresh 필드 업데이트용
     public void updateBasicInfo(boolean fixed, Integer launchYear) {
         this.fixed = fixed;
         this.launchYear = launchYear;
