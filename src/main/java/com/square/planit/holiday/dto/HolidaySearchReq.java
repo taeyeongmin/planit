@@ -11,6 +11,6 @@ public record HolidaySearchReq(
         Integer year,
         LocalDate from,
         LocalDate to,
-        String county,              // optional
+        String county,
         List<HolidayType> types
 ) {}

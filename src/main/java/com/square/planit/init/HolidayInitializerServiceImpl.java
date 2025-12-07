@@ -6,6 +6,7 @@ import com.square.planit.holiday.service.HolidayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -15,23 +16,32 @@ public class HolidayInitializerServiceImpl implements  HolidayInitializerService
     private final CountryService countryService;
     private final HolidayService holidayService;
 
-    private static final int START_YEAR = 2020;
-    private static final int END_YEAR = 2025;
+    private static final int YEARS_RANGE  = 5;
 
     @Override
     public void initializeAllData() {
 
+        int startYear = getStartYear();
+        int endYear = getEndYear();
+
         List<Country> countries = countryService.initCountries();
 
-        for (int year = START_YEAR; year <= END_YEAR; year++) {
+        for (int year = startYear; year <= endYear; year++) {
             for (Country country : countries) {
                 try {
                     holidayService.initHoliday(year, country);
                 } catch (Exception e) {
-                    e.printStackTrace();
                     throw e;
                 }
             }
         }
+    }
+
+    private int getStartYear() {
+        return LocalDate.now().getYear() - YEARS_RANGE;
+    }
+
+    private int getEndYear() {
+        return LocalDate.now().getYear();
     }
 }

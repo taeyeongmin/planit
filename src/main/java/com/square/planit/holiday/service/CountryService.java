@@ -23,7 +23,7 @@ public class CountryService {
 
         List<Country> saved = apiCountries.stream()
                 .map(c -> {
-                    // 이미 존재하면 skip
+                    // 존재하면 패스
                     return countryRepository.findById(c.countryCode())
                             .orElse(new Country(c.countryCode(), c.name()));
                 })

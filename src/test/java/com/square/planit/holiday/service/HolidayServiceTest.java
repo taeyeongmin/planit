@@ -1,6 +1,6 @@
 package com.square.planit.holiday.service;
 
-import com.square.planit.holiday.dto.HolidayRefreshReq;
+import com.square.planit.holiday.dto.HolidayModifyReq;
 import com.square.planit.holiday.exception.NotFoundCountryException;
 import com.square.planit.holiday.repository.CountryRepository;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ class HolidayServiceTest {
     void 예외_존재하지_않는_국가에대한_최신화(){
 
         // given
-        HolidayRefreshReq req = new HolidayRefreshReq("KR", 2025);
+        HolidayModifyReq req = new HolidayModifyReq("KR", 2025);
 
         // when
         when(countryRepository.findById(any())).thenReturn(Optional.empty());

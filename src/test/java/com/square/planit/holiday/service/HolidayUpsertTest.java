@@ -2,7 +2,7 @@ package com.square.planit.holiday.service;
 
 import com.square.planit.client.dto.HolidayRes;
 import com.square.planit.client.service.NagerApiClient;
-import com.square.planit.holiday.dto.HolidayRefreshReq;
+import com.square.planit.holiday.dto.HolidayModifyReq;
 import com.square.planit.holiday.entity.Holiday;
 import com.square.planit.holiday.repository.HolidayRepository;
 import org.junit.jupiter.api.Test;
@@ -19,6 +19,12 @@ import java.util.List;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.when;
 
+/**
+ * 공휴일 upsert에 테스트로  holiday_test.sql를 통해
+ * 기초 데이터 insert 후 진행한다.
+ *  - country: 1건
+ *  - Holiday: 1건
+ */
 @ActiveProfiles("test")
 @SpringBootTest
 @Sql("/sql/holiday_test.sql")
@@ -32,6 +38,7 @@ class HolidayUpsertTest {
 
     @MockitoBean
     private NagerApiClient apiClient;
+
 
     @Test
     @Transactional
@@ -55,7 +62,7 @@ class HolidayUpsertTest {
         when(apiClient.getPublicHolidays(2020, "CH"))
                 .thenReturn(mockedApiResult);
 
-        HolidayRefreshReq req = new HolidayRefreshReq("CH",2020);
+        HolidayModifyReq req = new HolidayModifyReq("CH",2020);
 
         // when
         holidayService.upsertHoliday(req);
@@ -100,7 +107,7 @@ class HolidayUpsertTest {
         when(apiClient.getPublicHolidays(2020, "CH"))
                 .thenReturn(mockedApiResult);
 
-        HolidayRefreshReq req = new HolidayRefreshReq("CH",2020);
+        HolidayModifyReq req = new HolidayModifyReq("CH",2020);
 
         // when
         holidayService.upsertHoliday(req);
@@ -160,7 +167,7 @@ class HolidayUpsertTest {
         when(apiClient.getPublicHolidays(2020, "CH"))
                 .thenReturn(mockedApiResult);
 
-        HolidayRefreshReq req = new HolidayRefreshReq("CH",2020);
+        HolidayModifyReq req = new HolidayModifyReq("CH",2020);
 
         // when
         holidayService.upsertHoliday(req);
@@ -170,5 +177,4 @@ class HolidayUpsertTest {
 
         assertThat(holiday.getScopes().size()).isEqualTo(3);
     }
-
 }
