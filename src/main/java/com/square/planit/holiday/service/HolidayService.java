@@ -2,6 +2,7 @@ package com.square.planit.holiday.service;
 
 import com.square.planit.client.dto.HolidayRes;
 import com.square.planit.client.service.NagerApiClient;
+import com.square.planit.holiday.creator.HolidayEntityCreator;
 import com.square.planit.holiday.dto.HolidayKey;
 import com.square.planit.holiday.dto.HolidayRefreshReq;
 import com.square.planit.holiday.entity.Country;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class HolidayService {
     private final NagerApiClient apiClient;
     private final CountryRepository countryRepository;
     private final HolidayRepository holidayRepository;
+    private final HolidayEntityCreator holidayEntityCreator;
 
     @Transactional
     public void initHoliday(int year, Country country) {
@@ -32,7 +35,7 @@ public class HolidayService {
         List<HolidayRes> apiData =
                 apiClient.getPublicHolidays(year, country.getCode());
 
-        List<Holiday> holidayList = mergeApiRowsToHolidayList(country, apiData);
+        List<Holiday> holidayList = holidayEntityCreator.createHoliday(country, apiData);
 
         holidayRepository.saveAll(holidayList);
     }
@@ -47,54 +50,11 @@ public class HolidayService {
         List<HolidayRes> apiRows =
                 apiClient.getPublicHolidays(holidayRefreshReq.getYear(), holidayRefreshReq.getCountryCode());
 
-        // API row 를 Holiday 단위로 merge
-        List<Holiday> mergedHolidays = mergeApiRowsToHolidayList(country, apiRows);
+        // 공휴의 api 응답 결과를 Holiday Entity로 변환
+        List<Holiday> mergedHolidays = holidayEntityCreator.createHoliday(country, apiRows);
 
-        // merge된 Holiday 리스트로 upsert 수행
+        // 생성 된 Holiday Entity로 upsert 수행
         upsertMergedHolidays(mergedHolidays);
-    }
-
-    /**
-     * 전달 받은 공휴일 API 로직을 Holiday key 기준 병합
-     * @param country
-     * @param apiRows
-     * @return
-     */
-    private List<Holiday> mergeApiRowsToHolidayList(Country country, List<HolidayRes> apiRows) {
-
-
-        Map<HolidayKey, Holiday> merged = new HashMap<>();
-
-        for (HolidayRes hr : apiRows) {
-
-            HolidayKey key = HolidayKey.of(country, hr.date(), hr.localName(), hr.name());
-            Holiday holiday = merged.get(key);
-
-            if (holiday == null) {
-                holiday = Holiday.create(country, hr);
-                merged.put(key, holiday);
-            } else {
-                // 기본 정보 갱신 (fixed, launchYear 등)
-                holiday.updateBasicInfo(hr.fixed(), hr.launchYear());
-            }
-
-            // countiesm,types 조합을 HolidayScope로
-            List<String> counties = (hr.counties() == null || hr.counties().isEmpty())
-                            ? Collections.singletonList(null)
-                            : hr.counties();
-            List<String> types = hr.types() != null ? hr.types() : List.of();
-
-            for (String typeStr : types) {
-                HolidayType type = HolidayType.of(typeStr);
-
-                for (String county : counties) {
-                    HolidayScope scope = new HolidayScope(county, type);
-                    holiday.addScope(scope);
-                }
-            }
-        }
-
-        return new ArrayList<>(merged.values());
     }
 
     private void upsertMergedHolidays(List<Holiday> mergedHolidays) {
@@ -119,20 +79,16 @@ public class HolidayService {
             // 기본 필드 업데이트
             originHoliday.updateBasicInfo(newHoliday.isFixed(), newHoliday.getLaunchYear());
 
-            // Scope 스냅샷 방식으로 덮어쓰기
-            Set<HolidayScope> existingScopes = new HashSet<>(originHoliday.getScopes());
-            Set<HolidayScope> newScopes = new HashSet<>(newHoliday.getScopes());
+            // scope 덮어쓰기
+            originHoliday.clearScopes();
 
-            // 제거할 것: 기존 - 신규
-            Set<HolidayScope> toRemove = new HashSet<>(existingScopes);
-            toRemove.removeAll(newScopes);
-
-            // 추가할 것: 신규 - 기존
-            Set<HolidayScope> toAdd = new HashSet<>(newScopes);
-            toAdd.removeAll(existingScopes);
-
-            toRemove.forEach(originHoliday::removeScope);
-            toAdd.forEach(originHoliday::addScope);
+            for (HolidayScope scope : newHoliday.getScopes()) {
+                HolidayScope newScope = new HolidayScope(
+                        new LinkedHashSet<>(scope.getCounties()),
+                        new LinkedHashSet<>(scope.getTypes())
+                );
+                originHoliday.addScope(newScope);
+            }
         }
     }
 }

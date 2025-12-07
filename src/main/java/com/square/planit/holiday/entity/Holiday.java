@@ -6,11 +6,10 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 @Getter
 @Entity
@@ -27,6 +26,7 @@ import java.util.Set;
                 @Index(name = "idx_date", columnList = "date")
         }
 )
+@ToString
 public class Holiday extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -63,24 +63,7 @@ public class Holiday extends BaseEntity {
             cascade = CascadeType.ALL,
             orphanRemoval = true
     )
-    private Set<HolidayScope> scopes = new LinkedHashSet<>();
-
-    private Holiday(Country country,
-                    LocalDate date,
-                    String localName,
-                    String name,
-                    boolean fixed,
-                    boolean global,
-                    Integer launchYear) {
-        this.country = country;
-        this.date = date;
-        this.localName = localName;
-        this.name = name;
-        this.fixed = fixed;
-        this.global = global;
-        this.launchYear = launchYear;
-        this.year = date.getYear();
-    }
+    private List<HolidayScope> scopes = new ArrayList<>();
 
     private Holiday(Country country, HolidayRes hr) {
         this.country = country;
@@ -112,5 +95,11 @@ public class Holiday extends BaseEntity {
     public void updateBasicInfo(boolean fixed, Integer launchYear) {
         this.fixed = fixed;
         this.launchYear = launchYear;
+    }
+
+    public void clearScopes() {
+        for (HolidayScope scope : new ArrayList<>(scopes)) {
+            removeScope(scope);
+        }
     }
 }

@@ -5,23 +5,13 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
-import java.util.Objects;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
-@Table(
-    name = "holiday_scope",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uk_holiday_scope_holiday_county_type",
-            columnNames = {"holiday_id", "county_code", "holiday_type"}
-        )
-    },
-    indexes = {
-        @Index(name = "idx_holiday_scope_county", columnList = "county_code"),
-        @Index(name = "idx_holiday_scope_type", columnList = "holiday_type")
-    }
-)
+@Table(name = "holiday_scope")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class HolidayScope {
@@ -35,33 +25,37 @@ public class HolidayScope {
     @JoinColumn(name = "holiday_id", nullable = false)
     private Holiday holiday;
 
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "holiday_scope_county",
+            joinColumns = @JoinColumn(name = "scope_id")
+    )
     @Column(name = "county_code", length = 20)
-    private String countyCode;
+    @BatchSize(size = 100)
+    private Set<String> counties = new LinkedHashSet<>();
 
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "holiday_scope_type",
+            joinColumns = @JoinColumn(name = "scope_id")
+    )
     @Enumerated(EnumType.STRING)
-    @Column(name = "holiday_type", nullable = false, length = 30)
-    private HolidayType type;
+    @Column(name = "holiday_type", length = 30)
+    @BatchSize(size = 100)
+    private Set<HolidayType> types = new LinkedHashSet<>();
 
-    public HolidayScope(String countyCode, HolidayType type) {
-        this.countyCode = countyCode;
-        this.type = type;
+    public HolidayScope(Set<String> counties, Set<HolidayType> types) {
+        if (counties != null) {
+            this.counties.addAll(counties);
+        }
+        if (types != null) {
+            this.types.addAll(types);
+        }
     }
 
     void setHoliday(Holiday holiday) {
         this.holiday = holiday;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof HolidayScope)) return false;
-        HolidayScope hs = (HolidayScope) o;
-        return Objects.equals(countyCode, hs.countyCode)
-            && type == hs.type;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(countyCode, type);
-    }
 }
